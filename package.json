@@ -19,8 +19,8 @@
   },
   "homepage": "https://github.com/Project-J/hdom-playground#readme",
   "dependencies": {
+    "@thi.ng/hdom": "^4.0.4",
     "budo": "^11.3.2",
-    "hdom": "^1.0.0",
     "normalize.css": "^8.0.0"
   }
 }
