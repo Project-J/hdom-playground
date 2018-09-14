@@ -1,71 +1,82 @@
 "use strict";
 let hdom = require("@thi.ng/hdom");
 let rng = require("./app/rng");
+let loader = require("./app/loader");
 
-function other({nums}) {
-    return [
-        "code", 
-        nums.reduce(
-            (acc, val) => acc + val, 
-            0)
-    ];
-}
+let audioContext = new AudioContext();
+let analyser = audioContext.createAnalyser();
+analyser.connect(audioContext.destination);
 
+window.ac = audioContext;
 
-function nestedThing({some}) {
-    return ["p.other", some, other];
-}
-
-
-function status({nums}){
-    return ["h1.big", "loads of " + nums.length, nestedThing];
-}
-
-function chart({nums}) {
-    let numEls = nums.length;
-    let elWidth = 100 / numEls;
-    let max = Math.max.apply(Math, nums);
-    
-    return () => 
-        ["section.chart",
-            nums.map(function(v) {
-                return ["div", {
-                    style: {
-                        height: `${(v/max)*100}%`,
-                        width: `${elWidth}%`
-                    }
-                }];
-            }),
-            status
-        ];
-}
-
-
-function app() {
-    return () => ["section", chart];
-}
-
-
-// start update loop (browser only, see diagram below)
-
-const ctx = {
-    nums: rng.nRandoms(10, 150),
-    some: "thing",
-    data: {}
+const state = {
+    loading: false,
+    audioData: [],
+    started: false,
+    audioOut: analyser
 };
 
-let numcols = 25;
+window.state = state;
 
-function update(){
-    let next = rng.nRandoms(10, numcols).sort();
-    ctx.nums = next.concat(rng.nRandoms(10, numcols).sort().reverse());
+function startApp(){
+    return [
+        "button", 
+        {
+            onclick: function(){
+                state.started = true;
+                state.loading = true;
+                loader.loadSound("/mp3/bomb.mp3")
+                    .then(function(audioData) {
+                        return audioContext.decodeAudioData(audioData)
+                    })
+                    .then(function(decoded){
+                        state.audioData = decoded;
+                        state.loading = false;
+                    });
+            }
+        },
+        "load music"];
 }
 
-setInterval(update, 1000);
+function doPlay() {
+    const source = state.bufferSource || audioContext.createBufferSource();
+    state.bufferSource = source;
+    source.buffer = state.audioData;
+    source.connect(state.audioOut);
+    source.start();
+}
+
+function play({isPlaying}){
+    const message = isPlaying ? "stop" : "play";
+    return ["button", {
+        onclick: function(){
+            state.isPlaying = !state.isPlaying;
+            doPlay(state.isPlaying);
+        } 
+    }, message];
+ 
+}
+
+function app() {
+    return function({loading, started}) {
+
+        const isLoading = Boolean(loading);
+        const isStarted = Boolean(started);
+
+        return ["section", 
+            (isStarted 
+                ? ["p", "hello!"]
+                : startApp),
+            (isStarted && !isLoading 
+                ? [play]
+                : [])];
+    };
+}
+
 
 hdom.start(
     app(), 
     { 
         root: document.body, 
-        ctx
+        ctx: state
     });
