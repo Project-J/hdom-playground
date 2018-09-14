@@ -21,6 +21,7 @@ body {
 }
 
 .chart div {
+  transition: all 1s ease-in-out;
   background: black;
   display: inline-block;
   vertical-align: bottom;
